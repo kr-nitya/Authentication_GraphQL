@@ -1,0 +1,9 @@
+# Ignore node_modules folder
+node_modules
+
+# Ignore files related to API keys
+.env
+
+#Ignore Package-lock.json
+package-lock.json
+
