@@ -14,10 +14,11 @@ module.exports = gql`
     email: String!
   }
   type Query {
-    hello: String!
+    getDetails:User!
   }
   type Mutation {
     register(registerInput: RegisterInput): User!
     login(username: String!, password: String!): User!
   }
+
 `;
