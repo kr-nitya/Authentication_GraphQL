@@ -1,15 +1,12 @@
 const bcrypt = require("bcryptjs");
-const Redis = require("ioredis");
 const jwt = require("jsonwebtoken");
 const { UserInputError } = require("apollo-server");
-const {
-  validateRegisterInput,
-  validateLoginInput,
-} = require("../utility/validators");
+const { validateRegisterInput, validateLoginInput } = require("../utility/validators");
 const dotenv = require("dotenv");
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY || "";
 const User = require("../models/User");
+const Redis = require("ioredis");
 const client = new Redis();
 
 client.on("error", function (error) {
@@ -29,6 +26,29 @@ function generateToken(user) {
 }
 
 module.exports = {
+  Query: {
+    async getDetails(_, __, context) {
+      const { req } = context;
+      const authToken = req.headers.authorization || "";
+      if (!authToken) {
+        throw new UserInputError("Token not provided");
+      }
+      const cachedUserData = await client.get(authToken);
+      if (!cachedUserData) {
+        throw new UserInputError("User data not found in cache");
+      }
+      // Parse cached user data
+      const userData = JSON.parse(cachedUserData);
+      // Ensure all required fields are present
+      if (!userData._id || !userData.email || !userData.username) {
+        throw new UserInputError("Missing required fields in cached user data");
+      }
+      return userData;
+    },
+    randomTest:()=>"Random auth",
+    publicData: () => 'This is public data!', // Resolver for publicData query
+  },
+
   Mutation: {
     async login(_, { username, password }, context) {
       const { req } = context;
@@ -100,26 +120,6 @@ module.exports = {
         ...res._doc,
         id: res._id,
       };
-    },
-  },
-  Query: {
-    async getDetails(_, __, context) {
-      const { req } = context;
-      const authToken = req.headers.authorization || "";
-      if (!authToken) {
-        throw new UserInputError("Token not provided");
-      }
-      const cachedUserData = await client.get(authToken);
-      if (!cachedUserData) {
-        throw new UserInputError("User data not found in cache");
-      }
-      // Parse cached user data
-      const userData = JSON.parse(cachedUserData);
-      // Ensure all required fields are present
-      if (!userData._id || !userData.email || !userData.username) {
-        throw new UserInputError("Missing required fields in cached user data");
-      }
-      return userData;
     },
   },
 };
